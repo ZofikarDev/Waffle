@@ -1,0 +1,70 @@
+Program ::= TopLevelDecl*
+
+TopLevelDecl ::= UseDecl | FuncDef | ExternDecl
+
+UseDecl ::= "use" PkgId ("as" Ident)? ";"
+PkgId   ::= Ident ("." Ident)*
+
+Type ::= "bool"
+       | "int8" | "int16" | "int32" | "int64"
+       | "uint8" | "uint16" | "uint32" | "uint64"
+       | "fp32" | "fp64"
+
+DeclStmt ::= ( ("mut")? Type | ("mut")? "var" ) Ident ( "=" Expr )? ";"
+
+Stmt ::= Block
+       | DeclStmt
+       | AssignStmt ";"
+       | ExprStmt ";"
+       | IfStmt
+       | WhileStmt
+       | ForStmt
+       | ReturnStmt ";"
+       | TernaryStmt
+
+Block ::= "{" Stmt* "}"
+
+AssignStmt ::= Place AssignOp Expr
+AssignOp   ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+Place      ::= Ident
+
+ExprStmt ::= Expr
+
+TernaryStmt ::= Expr "?" Stmt ":" Stmt
+
+IfStmt    ::= "if" "(" Expr ")" Stmt ( "else" Stmt )?
+WhileStmt ::= "while" "(" Expr ")" Stmt
+
+ForStmt   ::= "for" "(" ForInit ";" Expr? ";" ForStep ")" Stmt
+ForInit   ::= /* empty */ | DeclInit | AssignStmt
+DeclInit  ::= ( ("mut")? Type | ("mut")? "var" ) Ident "=" Expr
+ForStep   ::= /* empty */ | AssignStmt
+
+ReturnStmt ::= "return" Expr?
+
+Expr    ::= LogicOr
+LogicOr ::= LogicAnd ( "||" LogicAnd )*
+LogicAnd ::= BitOr ( "&&" BitOr )*
+BitOr   ::= BitXor ( "|" BitXor )*
+BitXor  ::= BitAnd ( "^" BitAnd )*
+BitAnd  ::= Equality ( "&" Equality )*
+Equality ::= Rel ( ("==" | "!=") Rel )*
+Rel     ::= Shift ( ("<" | "<=" | ">" | ">=") Shift )*
+Shift   ::= Add ( ("<<" | ">>") Add )*
+Add     ::= Mul ( ("+" | "-") Mul )*
+Mul     ::= Prefix ( ("*" | "/" | "%") Prefix )*
+
+Prefix ::= IncDecPrefix
+         | ( "+" | "-" | "!" | "~" ) Prefix
+         | Postfix
+
+IncDecPrefix ::= ("++" | "--") Place
+
+Postfix ::= Place PostOp*
+          | Primary
+PostOp  ::= "++" | "--"
+
+Primary ::= Ident | Literal | "(" Expr ")"
+
+FuncDef    ::= "func" Ident "(" ParamList? ")" RetType Block
+ExternDecl ::= "extern" StringLiteral? "func" Ident "(" ParamList? ")" R
