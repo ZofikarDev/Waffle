@@ -1,4 +1,6 @@
 #pragma once
+
+#include <ostream>
 #include <string>
 
 namespace Lexer
@@ -79,6 +81,8 @@ namespace Lexer
         Eof,
         Error
     };
+
+    std::ostream &operator<<(std::ostream &os, TokenKind kind);
 
     struct Span
     {

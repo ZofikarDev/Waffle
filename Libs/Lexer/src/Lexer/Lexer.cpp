@@ -1,12 +1,14 @@
-#include <Lexer/Lexer.h>
+#include "Lexer/Lexer.h"
+#include <algorithm>
 #include <array>
 #include <cctype>
-#include <unordered_map>
+#include <string_view>
 
-using namespace std::literals;
+using namespace std::string_view_literals;
 
 namespace Lexer
 {
+
     namespace Detail
     {
         constexpr auto kKeywords = std::to_array<std::pair<std::string_view, TokenKind>>(
@@ -28,171 +30,288 @@ namespace Lexer
                 {{"<<="sv, TokenKind::LtLtEq},    {">>="sv, TokenKind::GtGtEq},  {"++"sv, TokenKind::PlusPlus},
                  {"--"sv, TokenKind::MinusMinus}, {"+="sv, TokenKind::PlusEq},   {"-="sv, TokenKind::MinusEq},
                  {"*="sv, TokenKind::StarEq},     {"/="sv, TokenKind::SlashEq},  {"%="sv, TokenKind::PercentEq},
-                 {"<<"sv, TokenKind::LtLt},       {">>"sv, TokenKind::GtGt},     {"=="sv, TokenKind::EqEq},
-                 {"!="sv, TokenKind::NotEq},      {"<="sv, TokenKind::LtEq},     {">="sv, TokenKind::GtEq},
+                 {"&="sv, TokenKind::AmpEq},      {"|="sv, TokenKind::PipeEq},   {"^="sv, TokenKind::CaretEq},
+                 {"=="sv, TokenKind::EqEq},       {"!="sv, TokenKind::NotEq},    {"<="sv, TokenKind::LtEq},
+                 {">="sv, TokenKind::GtEq},       {"<<"sv, TokenKind::LtLt},     {">>"sv, TokenKind::GtGt},
                  {"&&"sv, TokenKind::AndAnd},     {"||"sv, TokenKind::OrOr},     {"+"sv, TokenKind::Plus},
                  {"-"sv, TokenKind::Minus},       {"*"sv, TokenKind::Star},      {"/"sv, TokenKind::Slash},
                  {"%"sv, TokenKind::Percent},     {"="sv, TokenKind::Eq},        {"<"sv, TokenKind::Lt},
-                 {">"sv, TokenKind::Gt},          {"&="sv, TokenKind::AmpEq},    {"|="sv, TokenKind::PipeEq},
-                 {"^="sv, TokenKind::CaretEq},    {"&"sv, TokenKind::Amp},       {"|"sv, TokenKind::Pipe},
+                 {">"sv, TokenKind::Gt},          {"&"sv, TokenKind::Amp},       {"|"sv, TokenKind::Pipe},
                  {"^"sv, TokenKind::Caret},       {"~"sv, TokenKind::Tilde},     {"!"sv, TokenKind::Bang},
                  {"?"sv, TokenKind::Question},    {":"sv, TokenKind::Colon},     {"("sv, TokenKind::LParen},
                  {")"sv, TokenKind::RParen},      {"{"sv, TokenKind::LBrace},    {"}"sv, TokenKind::RBrace},
                  {","sv, TokenKind::Comma},       {";"sv, TokenKind::Semicolon}, {"."sv, TokenKind::Dot}});
-
     } // namespace Detail
 
-    Lexer::Lexer(std::string src, std::string fname) : source(std::move(src)), filename(std::move(fname)), pos(0) {}
-
-    Token Lexer::MakeToken_(TokenKind kind, std::size_t const start, std::size_t length) const
-    {
-        return Token{kind, source.substr(start, length), Span{filename, start, length}};
-    }
-
-    char Lexer::PeekChar_(std::size_t offset) const
-    {
-        if (pos + offset >= source.size())
-            return '\0';
-        return source[pos + offset];
-    }
-
-    char Lexer::Advance_()
-    {
-        if (pos >= source.size())
-            return '\0';
-        return source[pos++];
-    }
-
-    bool Lexer::Match_(std::string_view op)
-    {
-        for (size_t i = 0; i < op.size(); ++i) {
-            if (PeekChar_(i) != op[i]) {
-                return false;
-            }
-        }
-        // If we reach here, it matches → consume
-        for (size_t i = 0; i < op.size(); ++i) {
-            Advance_();
-        }
-        return true;
-    }
-
-    std::string Lexer::SourceSlice_(std::size_t start, std::size_t end) const
-    {
-        return source.substr(start, end - start);
-    }
-
-    constexpr TokenKind Lexer::LookupKeyword_(std::string_view text)
-    {
-        if (auto it = std::ranges::find(Detail::kKeywords, text, [](auto const &pair) { return pair.first; });
-            it != Detail::kKeywords.end())
-            return it->second;
-        return TokenKind::Ident;
-    }
-
-    bool Lexer::Eof_() const { return pos >= source.size(); }
+    Lexer::Lexer(std::istream &input, std::string filename) : input_(input), filename_(std::move(filename)) {}
 
     Token Lexer::Next()
     {
-        // Skip whitespaces and comments
-        while (true) {
-            if (std::isspace(PeekChar_())) {
-                Advance_();
-                continue;
-            }
-            if (PeekChar_() == '/' && PeekChar_(1) == '/') {
-                while (!Eof_() && PeekChar_() != '\n')
-                    Advance_();
-                continue;
-            }
-            if (PeekChar_() == '/' && PeekChar_(1) == '*') {
-                Advance_();
-                Advance_(); // consume "/*"
-                while (!Eof_() && !(PeekChar_() == '*' && PeekChar_(1) == '/'))
-                    Advance_();
-                if (!Eof_()) {
-                    Advance_();
-                    Advance_();
-                } // consume "*/"
-                continue;
-            }
+        SkipWhitespace_();
 
-            break;
+        if (Eof_()) {
+            return MakeToken_(TokenKind::Eof, current_pos_, "");
         }
 
-        if (Eof_())
-            return MakeToken_(TokenKind::Eof, pos, 0);
-
-        std::size_t start = pos;
-        char c = PeekChar_();
-
-        // Identifiers / keywords
-        if (std::isalpha(c) || c == '_') {
-            Advance_(); // only now consume
-            while (std::isalnum(PeekChar_()) || PeekChar_() == '_')
-                Advance_();
-            auto text = SourceSlice_(start, pos);
-            return MakeToken_(LookupKeyword_(text), start, pos - start);
-        }
-
-        // Numbers
-        if (std::isdigit(c)) {
-            Advance_();
-            while (std::isdigit(PeekChar_()))
-                Advance_();
-            if (PeekChar_() == '.' && std::isdigit(PeekChar_(1))) {
-                Advance_(); // dot
-                while (std::isdigit(PeekChar_()))
-                    Advance_();
-                return MakeToken_(TokenKind::FloatLiteral, start, pos - start);
-            }
-            return MakeToken_(TokenKind::IntLiteral, start, pos - start);
-        }
-
-        // String literal
-        if (c == '"') {
-            Advance_(); // consume opening quote
-            while (!Eof_() && PeekChar_() != '"') {
-                if (PeekChar_() == '\\')
-                    Advance_();
-                Advance_();
-            }
-            if (Eof_())
-                return MakeToken_(TokenKind::Error, start, pos - start); // unterminated string literal
-            Advance_(); // closing quote
-            return MakeToken_(TokenKind::StringLiteral, start, pos - start);
-        }
-
-        // Operators & punctuation
-        for (auto const &[op, kind]: Detail::kOperators) {
-            if (Match_(op)) {
-                return MakeToken_(kind, start, op.size());
-            }
-        }
-
-        // If nothing matches
-        Advance_(); // consume one char as error recovery
-        return MakeToken_(TokenKind::Error, start, 1);
+        return ScanToken_();
     }
 
     Token Lexer::Peek(std::size_t lookahead)
     {
-        std::size_t const saved = pos;
-        Token t = Next();
-        pos = saved;
-        return t;
+        // Simple implementation: save state, advance lookahead times, restore
+        auto saved_pos = current_pos_;
+        auto saved_line = line_;
+        auto saved_column = column_;
+        auto saved_buffer = buffer_;
+
+        Token result{TokenKind::Eof, "", {filename_, current_pos_, 0}};
+        for (std::size_t i = 0; i <= lookahead; ++i) {
+            result = Next();
+        }
+
+        // Restore state
+        current_pos_ = saved_pos;
+        line_ = saved_line;
+        column_ = saved_column;
+        buffer_ = saved_buffer;
+        input_.clear();
+        input_.seekg(current_pos_);
+
+        return result;
     }
 
     std::vector<Token> Lexer::Tokenize()
     {
-        std::vector<Token> result;
-        for (;;) {
-            Token t = Next();
-            result.push_back(t);
-            if (t.kind == TokenKind::Eof)
-                break;
+        std::vector<Token> tokens;
+        Token token;
+        do {
+            token = Next();
+            tokens.push_back(token);
         }
-        return result;
+        while (token.kind != TokenKind::Eof);
+        return tokens;
+    }
+
+    Token Lexer::MakeToken_(TokenKind kind, std::size_t start, std::string const &lexeme) const
+    {
+        return {kind, lexeme, {filename_, start, lexeme.length()}};
+    }
+
+    char Lexer::PeekChar_(std::size_t offset)
+    {
+        EnsureBuffered_(offset + 1);
+        if (offset >= buffer_.size()) {
+            return '\0';
+        }
+        return buffer_[offset];
+    }
+
+    char Lexer::Advance_()
+    {
+        if (Eof_()) {
+            return '\0';
+        }
+
+        EnsureBuffered_(1);
+        if (buffer_.empty()) {
+            return '\0';
+        }
+
+        char c = buffer_.front();
+        buffer_.pop_front();
+        current_pos_++;
+
+        if (c == '\n') {
+            line_++;
+            column_ = 1;
+        }
+        else {
+            column_++;
+        }
+
+        return c;
+    }
+
+    bool Lexer::Match_(std::string_view op)
+    {
+        for (std::size_t i = 0; i < op.length(); ++i) {
+            if (PeekChar_(i) != op[i]) {
+                return false;
+            }
+        }
+
+        // Consume the matched characters
+        for (std::size_t i = 0; i < op.length(); ++i) {
+            Advance_();
+        }
+
+        return true;
+    }
+
+    constexpr TokenKind Lexer::LookupKeyword_(std::string_view text)
+    {
+        auto it = std::find_if(Detail::kKeywords.begin(), Detail::kKeywords.end(),
+                               [text](auto const &pair) { return pair.first == text; });
+        return it != Detail::kKeywords.end() ? it->second : TokenKind::Ident;
+    }
+
+    bool Lexer::Eof_() const { return eof_reached_ && buffer_.empty(); }
+
+    void Lexer::EnsureBuffered_(std::size_t count)
+    {
+        while (buffer_.size() < count && !eof_reached_) {
+            char c;
+            if (input_.get(c)) {
+                buffer_.push_back(c);
+            }
+            else {
+                eof_reached_ = true;
+            }
+        }
+    }
+
+    Token Lexer::ScanToken_()
+    {
+        std::size_t start = current_pos_;
+        char c = PeekChar_();
+
+        if (c == '/' && PeekChar_(1) == '/') {
+            SkipLineComment_();
+            return Next();
+        }
+
+        if (c == '/' && PeekChar_(1) == '*') {
+            SkipBlockComment_();
+            return Next();
+        }
+
+        // Try operators (longest first)
+        for (auto const &[op, kind]: Detail::kOperators) {
+            if (Match_(op)) {
+                return MakeToken_(kind, start, std::string(op));
+            }
+        }
+
+        c = PeekChar_();
+
+        if (std::isalpha(c) || c == '_') {
+            return ScanIdentifier_();
+        }
+
+        if (std::isdigit(c)) {
+            return ScanNumber_();
+        }
+
+        if (c == '"') {
+            return ScanString_();
+        }
+
+        if (c == '/' && PeekChar_(1) == '/') {
+            SkipLineComment_();
+            return Next();
+        }
+
+        if (c == '/' && PeekChar_(1) == '*') {
+            SkipBlockComment_();
+            return Next();
+        }
+
+        Advance_();
+        return MakeToken_(TokenKind::Error, start, std::string(1, c));
+    }
+
+    Token Lexer::ScanIdentifier_()
+    {
+        std::size_t start = current_pos_;
+        std::string lexeme;
+
+        while (std::isalnum(PeekChar_()) || PeekChar_() == '_') {
+            lexeme += Advance_();
+        }
+
+        TokenKind kind = LookupKeyword_(lexeme);
+        return MakeToken_(kind, start, lexeme);
+    }
+
+    Token Lexer::ScanNumber_()
+    {
+        std::size_t start = current_pos_;
+        std::string lexeme;
+        bool is_float = false;
+
+        while (std::isdigit(PeekChar_())) {
+            lexeme += Advance_();
+        }
+
+        if (PeekChar_() == '.' && std::isdigit(PeekChar_(1))) {
+            is_float = true;
+            lexeme += Advance_(); // consume '.'
+            while (std::isdigit(PeekChar_())) {
+                lexeme += Advance_();
+            }
+        }
+
+        TokenKind kind = is_float ? TokenKind::FloatLiteral : TokenKind::IntLiteral;
+        return MakeToken_(kind, start, lexeme);
+    }
+
+    Token Lexer::ScanString_()
+    {
+        std::size_t start = current_pos_;
+        std::string lexeme;
+
+        lexeme += Advance_(); // consume opening quote
+
+        while (!Eof_() && PeekChar_() != '"') {
+            if (PeekChar_() == '\\') {
+                lexeme += Advance_(); // consume backslash
+                if (!Eof_()) {
+                    lexeme += Advance_(); // consume escaped character
+                }
+            }
+            else {
+                lexeme += Advance_();
+            }
+        }
+
+        if (Eof_()) {
+            return MakeToken_(TokenKind::Error, start, lexeme);
+        }
+
+        lexeme += Advance_(); // consume closing quote
+        return MakeToken_(TokenKind::StringLiteral, start, lexeme);
+    }
+
+    void Lexer::SkipLineComment_()
+    {
+        Advance_(); // consume first '/'
+        Advance_(); // consume second '/'
+
+        while (!Eof_() && PeekChar_() != '\n') {
+            Advance_();
+        }
+    }
+
+    void Lexer::SkipBlockComment_()
+    {
+        Advance_(); // consume '/'
+        Advance_(); // consume '*'
+
+        while (!Eof_()) {
+            if (PeekChar_() == '*' && PeekChar_(1) == '/') {
+                Advance_(); // consume '*'
+                Advance_(); // consume '/'
+                break;
+            }
+            Advance_();
+        }
+    }
+
+    void Lexer::SkipWhitespace_()
+    {
+        while (!Eof_() && std::isspace(PeekChar_())) {
+            Advance_();
+        }
     }
 
 } // namespace Lexer

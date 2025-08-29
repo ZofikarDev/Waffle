@@ -1,24 +1,13 @@
 #include <Lexer/Lexer.h>
 #include <gtest/gtest.h>
 
-void ExpectTokens(std::string const &input, std::initializer_list<Lexer::TokenKind> kinds)
-{
-    Lexer::Lexer lx(input);
-    auto toks = lx.Tokenize();
-    size_t i = 0;
-    for (auto kind: kinds) {
-        ASSERT_LT(i, toks.size());
-        EXPECT_EQ(toks[i].kind, kind);
-        ++i;
-    }
-}
-
 //
 // Identifiers
 //
 TEST(LexerIdentifiers, SimpleIdents)
 {
-    Lexer::Lexer lx("foo bar123");
+    auto text = std::istringstream("foo bar123");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::Ident);
@@ -30,7 +19,8 @@ TEST(LexerIdentifiers, SimpleIdents)
 
 TEST(LexerIdentifiers, UnderscoreIdents)
 {
-    Lexer::Lexer lx("_baz");
+    auto text = std::istringstream("_baz");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::Ident);
@@ -42,7 +32,9 @@ TEST(LexerIdentifiers, UnderscoreIdents)
 //
 TEST(LexerKeywords, BasicKeywords)
 {
-    Lexer::Lexer lx("func return mut var if else while for extern use public void bool int32 fp64 true false");
+    auto text = std::istringstream(
+            "func return mut var if else while for extern use public void bool int32 fp64 true false");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::Func);
@@ -69,7 +61,8 @@ TEST(LexerKeywords, BasicKeywords)
 //
 TEST(LexerLiterals, IntAndFloat)
 {
-    Lexer::Lexer lx("42 123.456");
+    auto text = std::istringstream("42 123.456");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::IntLiteral);
@@ -81,7 +74,8 @@ TEST(LexerLiterals, IntAndFloat)
 
 TEST(LexerLiterals, StringLiteral)
 {
-    Lexer::Lexer lx("\"hello world\"");
+    auto text = std::istringstream("\"hello world\"");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::StringLiteral);
@@ -93,7 +87,8 @@ TEST(LexerLiterals, StringLiteral)
 //
 TEST(LexerOperators, SimpleOperators)
 {
-    Lexer::Lexer lx("+-*/% = == != < <= > >= && || ++ --");
+    auto text = std::istringstream("+-*/% = == != < <= > >= && || ++ -- &=");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::Plus);
@@ -112,11 +107,13 @@ TEST(LexerOperators, SimpleOperators)
     EXPECT_EQ(toks[13].kind, Lexer::TokenKind::OrOr);
     EXPECT_EQ(toks[14].kind, Lexer::TokenKind::PlusPlus);
     EXPECT_EQ(toks[15].kind, Lexer::TokenKind::MinusMinus);
+    EXPECT_EQ(toks[16].kind, Lexer::TokenKind::AmpEq);
 }
 
 TEST(LexerPunctuation, BracesAndParens)
 {
-    Lexer::Lexer lx("(){},;");
+    auto text = std::istringstream("(){},;");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::LParen);
@@ -132,7 +129,8 @@ TEST(LexerPunctuation, BracesAndParens)
 //
 TEST(LexerComments, LineAndBlockComments)
 {
-    Lexer::Lexer lx("// line comment\n42 /* block comment */ 7");
+    auto text = std::istringstream("// line comment\n42 /* block comment */ 7");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::IntLiteral);
@@ -146,7 +144,8 @@ TEST(LexerComments, LineAndBlockComments)
 //
 TEST(LexerMisc, EofToken)
 {
-    Lexer::Lexer lx("");
+    auto text = std::istringstream("");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::Eof);
@@ -157,7 +156,8 @@ TEST(LexerMisc, EofToken)
 //
 TEST(LexerIdentifiers, KeywordVsIdent)
 {
-    Lexer::Lexer lx("funcs returnValue int32bit");
+    auto text = std::istringstream("funcs returnValue int32bit");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     // Should not match keywords because extra characters are present
@@ -168,7 +168,8 @@ TEST(LexerIdentifiers, KeywordVsIdent)
 
 TEST(LexerIdentifiers, MixedCase)
 {
-    Lexer::Lexer lx("Func Return INT32");
+    auto text = std::istringstream("Func Return INT32");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     // Case sensitivity check
@@ -182,7 +183,8 @@ TEST(LexerIdentifiers, MixedCase)
 //
 TEST(LexerLiterals, FloatWithoutFractional)
 {
-    Lexer::Lexer lx("123.");
+    auto text = std::istringstream("123.");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     // Currently lexed as int and dot
@@ -192,7 +194,8 @@ TEST(LexerLiterals, FloatWithoutFractional)
 
 TEST(LexerLiterals, UnterminatedString)
 {
-    Lexer::Lexer lx("\"hello");
+    auto text = std::istringstream("\"hello");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::Error);
@@ -200,7 +203,8 @@ TEST(LexerLiterals, UnterminatedString)
 
 TEST(LexerLiterals, EscapedQuote)
 {
-    Lexer::Lexer lx(R"("he\"llo")");
+    auto text = std::istringstream(R"("he\"llo")");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::StringLiteral);
@@ -212,7 +216,8 @@ TEST(LexerLiterals, EscapedQuote)
 //
 TEST(LexerOperators, CompoundAssignments)
 {
-    Lexer::Lexer lx("+= -= *= /= %= <<= >>= &= |= ^=");
+    auto text = std::istringstream("+= -= *= /= %= <<= >>= &= |= ^=");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::PlusEq);
@@ -229,7 +234,8 @@ TEST(LexerOperators, CompoundAssignments)
 
 TEST(LexerOperators, ShiftOps)
 {
-    Lexer::Lexer lx("<< >>");
+    auto text = std::istringstream("<< >>");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::LtLt);
@@ -241,7 +247,8 @@ TEST(LexerOperators, ShiftOps)
 //
 TEST(LexerPunctuation, QuestionColon)
 {
-    Lexer::Lexer lx("?:");
+    auto text = std::istringstream("?:");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     EXPECT_EQ(toks[0].kind, Lexer::TokenKind::Question);
@@ -253,7 +260,8 @@ TEST(LexerPunctuation, QuestionColon)
 //
 TEST(LexerComments, UnterminatedBlockComment)
 {
-    Lexer::Lexer lx("42 /* unterminated");
+    auto text = std::istringstream("42 /* unterminated");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     // Should still return int literal, then hit EOF
@@ -263,7 +271,8 @@ TEST(LexerComments, UnterminatedBlockComment)
 
 TEST(LexerComments, NestedBlockCommentNotSupported)
 {
-    Lexer::Lexer lx("1 /* outer /* inner */ still outer */ 2");
+    auto text = std::istringstream("1 /* outer /* inner */ still outer */ 2");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     // Depending on your spec, this might lex as:
@@ -277,7 +286,8 @@ TEST(LexerComments, NestedBlockCommentNotSupported)
 //
 TEST(LexerMisc, UnknownCharacter)
 {
-    Lexer::Lexer lx("@");
+    auto text = std::istringstream("@");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::Error);
@@ -285,7 +295,8 @@ TEST(LexerMisc, UnknownCharacter)
 
 TEST(LexerMisc, MultipleEofCalls)
 {
-    Lexer::Lexer lx("");
+    auto text = std::istringstream("");
+    Lexer::Lexer lx(text);
     auto toks = lx.Tokenize();
 
     ASSERT_EQ(toks[0].kind, Lexer::TokenKind::Eof);
