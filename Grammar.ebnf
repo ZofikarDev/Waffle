@@ -1,70 +1,122 @@
-Program ::= TopLevelDecl*
+/* ====== Program ====== */
+Program        ::= TopLevelDecl*
 
-TopLevelDecl ::= UseDecl | FuncDef | ExternDecl
+TopLevelDecl   ::= UseDecl | FuncDef | ExternDecl
 
-UseDecl ::= "use" PkgId ("as" Ident)? ";"
-PkgId   ::= Ident ("." Ident)*
+/* ====== Imports ====== */
+UseDecl        ::= "use" PkgId ("as" Ident)? ";"
+PkgId          ::= Ident ("." Ident)*
 
-Type ::= "bool"
-       | "int8" | "int16" | "int32" | "int64"
-       | "uint8" | "uint16" | "uint32" | "uint64"
-       | "fp32" | "fp64"
+/* ====== Identifiers & literals ====== */
+Ident          ::= (Letter | "_") (Letter | Digit | "_")*
+Letter         ::= [A-Za-z]
+DecDigit       ::= [0-9]
+DecDigits      ::= DecDigit ( "_"? DecDigit )*
 
-DeclStmt ::= ( ("mut")? Type | ("mut")? "var" ) Ident ( "=" Expr )? ";"
+HexDigit       ::= [0-9A-Fa-f]
+HexDigits      ::= HexDigit ( "_"? HexDigit )*
 
-Stmt ::= Block
-       | DeclStmt
-       | AssignStmt ";"
-       | ExprStmt ";"
-       | IfStmt
-       | WhileStmt
-       | ForStmt
-       | ReturnStmt ";"
-       | TernaryStmt
+BinDigit       ::= [01]
+BinDigits      ::= BinDigit ( "_"? BinDigit )*
 
-Block ::= "{" Stmt* "}"
+BooleanLiteral ::= "true" | "false"
 
-AssignStmt ::= Place AssignOp Expr
-AssignOp   ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
-Place      ::= Ident
+HexInteger     ::= ("0x" | "0X") HexDigits
+BinInteger     ::= ("0b" | "0B") BinDigits
+DecimalInteger ::= "0"
+                 | [1-9] DecDigits?
+IntegerLiteral ::= DecimalInteger | BinInteger | HexInteger
+/* Floats: allow .5, forbid 1. to keep 1.toString lexing safe */
+FloatLiteral   ::= DecimalInteger? "." DecDigits
 
-ExprStmt ::= Expr
+/* Strings with basic escapes: \" \\ \n \t \r */
+StringLiteral  ::= '"' ( Escape | CharNoQuoteNoBackslash )* '"'
+Escape         ::= '\' ( '"' | '\' | 'n' | 't' | 'r' )
+CharNoQuoteNoBackslash ::= [^"\\\n]
 
-TernaryStmt ::= Expr "?" Stmt ":" Stmt
+Literal        ::= BooleanLiteral | IntegerLiteral | FloatLiteral | StringLiteral
 
-IfStmt    ::= "if" "(" Expr ")" Stmt ( "else" Stmt )?
-WhileStmt ::= "while" "(" Expr ")" Stmt
+/* ====== Types & generics ====== */
 
-ForStmt   ::= "for" "(" ForInit ";" Expr? ";" ForStep ")" Stmt
-ForInit   ::= /* empty */ | DeclInit | AssignStmt
-DeclInit  ::= ( ("mut")? Type | ("mut")? "var" ) Ident "=" Expr
-ForStep   ::= /* empty */ | AssignStmt
+TypeArg        ::= Type | ConstExpr
+TypeArgList    ::= TypeArg ("," TypeArg)*
 
-ReturnStmt ::= "return" Expr?
+Type           ::= "bool"
+                 | "int8" | "int16" | "int32" | "int64"
+                 | "uint8" | "uint16" | "uint32" | "uint64"
+                 | "fp32" | "fp64"
+                 | Ident
+                 | Ident "<" TypeArgList ">"
 
-Expr    ::= LogicOr
-LogicOr ::= LogicAnd ( "||" LogicAnd )*
-LogicAnd ::= BitOr ( "&&" BitOr )*
-BitOr   ::= BitXor ( "|" BitXor )*
-BitXor  ::= BitAnd ( "^" BitAnd )*
-BitAnd  ::= Equality ( "&" Equality )*
-Equality ::= Rel ( ("==" | "!=") Rel )*
-Rel     ::= Shift ( ("<" | "<=" | ">" | ">=") Shift )*
-Shift   ::= Add ( ("<<" | ">>") Add )*
-Add     ::= Mul ( ("+" | "-") Mul )*
-Mul     ::= Prefix ( ("*" | "/" | "%") Prefix )*
+/* ====== Declarations & functions ====== */
+Param          ::= ("mut")? Type Ident
+ParamList      ::= Param ("," Param)*
 
-Prefix ::= IncDecPrefix
-         | ( "+" | "-" | "!" | "~" ) Prefix
-         | Postfix
+FuncDecl       ::= "func" Ident "(" ParamList? ")" Type?        /* implicit void when Type omitted */
+FuncDef        ::= FuncDecl Block
+ExternDecl     ::= "extern" StringLiteral? FuncDecl ";"
 
-IncDecPrefix ::= ("++" | "--") Place
+Decl           ::= ( ("mut")? Type | ("mut")? "var" ) Ident
+DeclInit       ::= Decl "=" Expr
+DeclStmt       ::= Decl ( "=" Expr )? ";"
 
-Postfix ::= Place PostOp*
-          | Primary
-PostOp  ::= "++" | "--"
+/* ====== Statements & blocks ====== */
+Stmt           ::= Block
+                 | DeclStmt
+                 | ExprStmt
+                 | IfStmt
+                 | WhileStmt
+                 | ForStmt
+                 | ReturnStmt
 
-Primary ::= Ident | Literal | "(" Expr ")"
+Block          ::= "{" Stmt* "}"
 
-FuncDef    ::= "func" Ident "(" ParamList? ")" RetType Block
-ExternDecl ::= "extern" StringLiteral? "func" Ident "(" ParamList? ")" R
+IfStmt         ::= "if" "(" Expr ")" Stmt ( "else" Stmt )?
+WhileStmt      ::= "while" "(" Expr ")" Stmt
+
+ForStmt        ::= "for" "(" ForInit ";" Expr? ";" ForStep ")" Stmt
+ForInit        ::= /* empty */ | DeclInit | Expr
+ForStep        ::= /* empty */ | Expr
+
+ReturnStmt     ::= "return" Expr? ";"
+
+/* Expression statement (covers assignment, calls, ++/--, etc.) */
+ExprStmt       ::= Expr ";"
+
+/* ====== Expressions ====== */
+/* Tails let us distinguish whether a call occurred */
+TailNoCall     ::= ( "." Ident | "[" Expr "]" )*
+TailWithCall   ::= "(" ArgList? ")" ( "." Ident | "[" Expr "]" | "(" ArgList? ")" )*
+
+/* Split references (no calls) from call-containing places to keep branches disjoint */
+Ref            ::= Ident TailNoCall
+LValue         ::= Ref
+PlaceWithCall  ::= Ref TailWithCall
+ParenWithCall  ::= "(" Expr ")" TailWithCall
+
+ArgList        ::= Expr ("," Expr)*
+
+/* Postfix ++/-- only on lvalues; no ambiguity with call places */
+PostSuffix     ::= "++" | "--"
+Primary        ::= Literal | "(" Expr ")"
+Postfix        ::= LValue PostSuffix? | PlaceWithCall | ParenWithCall | Primary
+
+IncDecPrefix   ::= ("++" | "--") LValue
+Prefix         ::= IncDecPrefix
+                 | ( "+" | "-" | "!" | "~" ) Prefix
+                 | Postfix
+
+Mul            ::= Prefix ( ("*" | "/" | "%") Prefix )*
+Add            ::= Mul ( ("+" | "-") Mul )*
+Shift          ::= Add ( ("<<" | ">>") Add )*
+Rel            ::= Shift ( ("<" | "<=" | ">" | ">=") Shift )*
+Equality       ::= Rel ( ("==" | "!=") Rel )*
+LogicAnd       ::= Equality ( "&&" Equality )*
+LogicOr        ::= LogicAnd ( "||" LogicAnd )*
+Ternary        ::= LogicOr ("?" Expr ":" Ternary)?
+ConstExpr      ::= Ternary
+
+/* Right-associative assignment (works as an expression) */
+AssignOp       ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+Assignment     ::= LValue AssignOp Assignment | ConstExpr
+Expr           ::= Assignment

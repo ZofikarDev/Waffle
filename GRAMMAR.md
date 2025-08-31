@@ -45,6 +45,277 @@ referenced by:
 
 * UseDecl
 
+**Ident:**
+
+![Ident](diagram/Ident.png)
+
+```
+Ident    ::= ( Letter | '_' ) ( Letter | Digit | '_' )*
+```
+
+referenced by:
+
+* Decl
+* FuncDecl
+* Param
+* PkgId
+* Ref
+* TailNoCall
+* TailWithCall
+* Type
+* UseDecl
+
+**Letter:**
+
+![Letter](diagram/Letter.png)
+
+```
+Letter   ::= [A-Za-z]
+```
+
+referenced by:
+
+* Ident
+
+**DecDigit:**
+
+![DecDigit](diagram/DecDigit.png)
+
+```
+DecDigit ::= [0-9]
+```
+
+referenced by:
+
+* DecDigits
+
+**DecDigits:**
+
+![DecDigits](diagram/DecDigits.png)
+
+```
+DecDigits
+         ::= DecDigit ( '_'? DecDigit )*
+```
+
+referenced by:
+
+* DecimalInteger
+* FloatLiteral
+
+**HexDigit:**
+
+![HexDigit](diagram/HexDigit.png)
+
+```
+HexDigit ::= [0-9A-Fa-f]
+```
+
+referenced by:
+
+* HexDigits
+
+**HexDigits:**
+
+![HexDigits](diagram/HexDigits.png)
+
+```
+HexDigits
+         ::= HexDigit ( '_'? HexDigit )*
+```
+
+referenced by:
+
+* HexInteger
+
+**BinDigit:**
+
+![BinDigit](diagram/BinDigit.png)
+
+```
+BinDigit ::= [0-1]
+```
+
+referenced by:
+
+* BinDigits
+
+**BinDigits:**
+
+![BinDigits](diagram/BinDigits.png)
+
+```
+BinDigits
+         ::= BinDigit ( '_'? BinDigit )*
+```
+
+referenced by:
+
+* BinInteger
+
+**BooleanLiteral:**
+
+![BooleanLiteral](diagram/BooleanLiteral.png)
+
+```
+BooleanLiteral
+         ::= 'true'
+           | 'false'
+```
+
+referenced by:
+
+* Literal
+
+**HexInteger:**
+
+![HexInteger](diagram/HexInteger.png)
+
+```
+HexInteger
+         ::= ( '0x' | '0X' ) HexDigits
+```
+
+referenced by:
+
+* IntegerLiteral
+
+**BinInteger:**
+
+![BinInteger](diagram/BinInteger.png)
+
+```
+BinInteger
+         ::= ( '0b' | '0B' ) BinDigits
+```
+
+referenced by:
+
+* IntegerLiteral
+
+**DecimalInteger:**
+
+![DecimalInteger](diagram/DecimalInteger.png)
+
+```
+DecimalInteger
+         ::= '0'
+           | [1-9] DecDigits?
+```
+
+referenced by:
+
+* FloatLiteral
+* IntegerLiteral
+
+**IntegerLiteral:**
+
+![IntegerLiteral](diagram/IntegerLiteral.png)
+
+```
+IntegerLiteral
+         ::= DecimalInteger
+           | BinInteger
+           | HexInteger
+```
+
+referenced by:
+
+* Literal
+
+**FloatLiteral:**
+
+![FloatLiteral](diagram/FloatLiteral.png)
+
+```
+FloatLiteral
+         ::= DecimalInteger? '.' DecDigits
+```
+
+referenced by:
+
+* Literal
+
+**StringLiteral:**
+
+![StringLiteral](diagram/StringLiteral.png)
+
+```
+StringLiteral
+         ::= '"' ( Escape | CharNoQuoteNoBackslash )* '"'
+```
+
+referenced by:
+
+* ExternDecl
+* Literal
+
+**Escape:**
+
+![Escape](diagram/Escape.png)
+
+```
+Escape   ::= '\' ( '"' | '\' | 'n' | 't' | 'r' )
+```
+
+referenced by:
+
+* StringLiteral
+
+**CharNoQuoteNoBackslash:**
+
+![CharNoQuoteNoBackslash](diagram/CharNoQuoteNoBackslash.png)
+
+```
+CharNoQuoteNoBackslash
+         ::= [^"\n]
+```
+
+referenced by:
+
+* StringLiteral
+
+**Literal:**
+
+![Literal](diagram/Literal.png)
+
+```
+Literal  ::= BooleanLiteral
+           | IntegerLiteral
+           | FloatLiteral
+           | StringLiteral
+```
+
+referenced by:
+
+* Primary
+
+**TypeArg:**
+
+![TypeArg](diagram/TypeArg.png)
+
+```
+TypeArg  ::= Type
+           | ConstExpr
+```
+
+referenced by:
+
+* TypeArgList
+
+**TypeArgList:**
+
+![TypeArgList](diagram/TypeArgList.png)
+
+```
+TypeArgList
+         ::= TypeArg ( ',' TypeArg )*
+```
+
+referenced by:
+
+* Type
+
 **Type:**
 
 ![Type](diagram/Type.png)
@@ -61,6 +332,85 @@ Type     ::= 'bool'
            | 'uint64'
            | 'fp32'
            | 'fp64'
+           | Ident ( '<' TypeArgList '>' )?
+```
+
+referenced by:
+
+* Decl
+* FuncDecl
+* Param
+* TypeArg
+
+**Param:**
+
+![Param](diagram/Param.png)
+
+```
+Param    ::= 'mut'? Type Ident
+```
+
+referenced by:
+
+* ParamList
+
+**ParamList:**
+
+![ParamList](diagram/ParamList.png)
+
+```
+ParamList
+         ::= Param ( ',' Param )*
+```
+
+referenced by:
+
+* FuncDecl
+
+**FuncDecl:**
+
+![FuncDecl](diagram/FuncDecl.png)
+
+```
+FuncDecl ::= 'func' Ident '(' ParamList? ')' Type?
+```
+
+referenced by:
+
+* ExternDecl
+* FuncDef
+
+**FuncDef:**
+
+![FuncDef](diagram/FuncDef.png)
+
+```
+FuncDef  ::= FuncDecl Block
+```
+
+referenced by:
+
+* TopLevelDecl
+
+**ExternDecl:**
+
+![ExternDecl](diagram/ExternDecl.png)
+
+```
+ExternDecl
+         ::= 'extern' StringLiteral? FuncDecl ';'
+```
+
+referenced by:
+
+* TopLevelDecl
+
+**Decl:**
+
+![Decl](diagram/Decl.png)
+
+```
+Decl     ::= 'mut'? ( Type | 'var' ) Ident
 ```
 
 referenced by:
@@ -68,12 +418,24 @@ referenced by:
 * DeclInit
 * DeclStmt
 
+**DeclInit:**
+
+![DeclInit](diagram/DeclInit.png)
+
+```
+DeclInit ::= Decl '=' Expr
+```
+
+referenced by:
+
+* ForInit
+
 **DeclStmt:**
 
 ![DeclStmt](diagram/DeclStmt.png)
 
 ```
-DeclStmt ::= 'mut'? ( Type | 'var' ) Ident ( '=' Expr )? ';'
+DeclStmt ::= Decl ( '=' Expr )? ';'
 ```
 
 referenced by:
@@ -87,11 +449,11 @@ referenced by:
 ```
 Stmt     ::= Block
            | DeclStmt
-           | ( AssignStmt | ExprStmt | ReturnStmt ) ';'
+           | ExprStmt
            | IfStmt
            | WhileStmt
            | ForStmt
-           | TernaryStmt
+           | ReturnStmt
 ```
 
 referenced by:
@@ -99,7 +461,6 @@ referenced by:
 * Block
 * ForStmt
 * IfStmt
-* TernaryStmt
 * WhileStmt
 
 **Block:**
@@ -113,82 +474,6 @@ Block    ::= '{' Stmt* '}'
 referenced by:
 
 * FuncDef
-* Stmt
-
-**AssignStmt:**
-
-![AssignStmt](diagram/AssignStmt.png)
-
-```
-AssignStmt
-         ::= Place AssignOp Expr
-```
-
-referenced by:
-
-* ForInit
-* ForStep
-* Stmt
-
-**AssignOp:**
-
-![AssignOp](diagram/AssignOp.png)
-
-```
-AssignOp ::= '='
-           | '+='
-           | '-='
-           | '*='
-           | '/='
-           | '%='
-           | '<<='
-           | '>>='
-           | '&='
-           | '^='
-           | '|='
-```
-
-referenced by:
-
-* AssignStmt
-
-**Place:**
-
-![Place](diagram/Place.png)
-
-```
-Place    ::= Ident
-```
-
-referenced by:
-
-* AssignStmt
-* IncDecPrefix
-* Postfix
-
-**ExprStmt:**
-
-![ExprStmt](diagram/ExprStmt.png)
-
-```
-ExprStmt ::= Expr
-```
-
-referenced by:
-
-* Stmt
-
-**TernaryStmt:**
-
-![TernaryStmt](diagram/TernaryStmt.png)
-
-```
-TernaryStmt
-         ::= Expr '?' Stmt ':' Stmt
-```
-
-referenced by:
-
 * Stmt
 
 **IfStmt:**
@@ -233,31 +518,19 @@ referenced by:
 ![ForInit](diagram/ForInit.png)
 
 ```
-ForInit  ::= ( DeclInit | AssignStmt )?
+ForInit  ::= ( DeclInit | Expr )?
 ```
 
 referenced by:
 
 * ForStmt
 
-**DeclInit:**
-
-![DeclInit](diagram/DeclInit.png)
-
-```
-DeclInit ::= 'mut'? ( Type | 'var' ) Ident '=' Expr
-```
-
-referenced by:
-
-* ForInit
-
 **ForStep:**
 
 ![ForStep](diagram/ForStep.png)
 
 ```
-ForStep  ::= AssignStmt?
+ForStep  ::= Expr?
 ```
 
 referenced by:
@@ -270,153 +543,171 @@ referenced by:
 
 ```
 ReturnStmt
-         ::= 'return' Expr?
+         ::= 'return' Expr? ';'
 ```
 
 referenced by:
 
 * Stmt
 
-**Expr:**
+**ExprStmt:**
 
-![Expr](diagram/Expr.png)
+![ExprStmt](diagram/ExprStmt.png)
 
 ```
-Expr     ::= LogicOr
+ExprStmt ::= Expr ';'
 ```
 
 referenced by:
 
-* AssignStmt
-* DeclInit
-* DeclStmt
-* ExprStmt
-* ForStmt
-* IfStmt
-* Primary
-* ReturnStmt
-* TernaryStmt
-* WhileStmt
+* Stmt
 
-**LogicOr:**
+**TailNoCall:**
 
-![LogicOr](diagram/LogicOr.png)
+![TailNoCall](diagram/TailNoCall.png)
 
 ```
-LogicOr  ::= LogicAnd ( '||' LogicAnd )*
+TailNoCall
+         ::= ( '.' Ident | '[' Expr ']' )*
+```
+
+referenced by:
+
+* Ref
+
+**TailWithCall:**
+
+![TailWithCall](diagram/TailWithCall.png)
+
+```
+TailWithCall
+         ::= '(' ArgList? ')' ( '.' Ident | '[' Expr ']' | '(' ArgList? ')' )*
+```
+
+referenced by:
+
+* ParenWithCall
+* PlaceWithCall
+
+**Ref:**
+
+![Ref](diagram/Ref.png)
+
+```
+Ref      ::= Ident TailNoCall
+```
+
+referenced by:
+
+* LValue
+* PlaceWithCall
+
+**LValue:**
+
+![LValue](diagram/LValue.png)
+
+```
+LValue   ::= Ref
 ```
 
 referenced by:
 
 * Expr
+* IncDecPrefix
+* Postfix
 
-**LogicAnd:**
+**PlaceWithCall:**
 
-![LogicAnd](diagram/LogicAnd.png)
-
-```
-LogicAnd ::= BitOr ( '&&' BitOr )*
-```
-
-referenced by:
-
-* LogicOr
-
-**BitOr:**
-
-![BitOr](diagram/BitOr.png)
+![PlaceWithCall](diagram/PlaceWithCall.png)
 
 ```
-BitOr    ::= BitXor ( '|' BitXor )*
+PlaceWithCall
+         ::= Ref TailWithCall
 ```
 
 referenced by:
 
-* LogicAnd
+* Postfix
 
-**BitXor:**
+**ParenWithCall:**
 
-![BitXor](diagram/BitXor.png)
-
-```
-BitXor   ::= BitAnd ( '^' BitAnd )*
-```
-
-referenced by:
-
-* BitOr
-
-**BitAnd:**
-
-![BitAnd](diagram/BitAnd.png)
+![ParenWithCall](diagram/ParenWithCall.png)
 
 ```
-BitAnd   ::= Equality ( '&' Equality )*
+ParenWithCall
+         ::= '(' Expr ')' TailWithCall
 ```
 
 referenced by:
 
-* BitXor
+* Postfix
 
-**Equality:**
+**ArgList:**
 
-![Equality](diagram/Equality.png)
-
-```
-Equality ::= Rel ( ( '==' | '!=' ) Rel )*
-```
-
-referenced by:
-
-* BitAnd
-
-**Rel:**
-
-![Rel](diagram/Rel.png)
+![ArgList](diagram/ArgList.png)
 
 ```
-Rel      ::= Shift ( ( '<' | '<=' | '>' | '>=' ) Shift )*
+ArgList  ::= Expr ( ',' Expr )*
 ```
 
 referenced by:
 
-* Equality
+* TailWithCall
 
-**Shift:**
+**PostSuffix:**
 
-![Shift](diagram/Shift.png)
-
-```
-Shift    ::= Add ( ( '<<' | '>>' ) Add )*
-```
-
-referenced by:
-
-* Rel
-
-**Add:**
-
-![Add](diagram/Add.png)
+![PostSuffix](diagram/PostSuffix.png)
 
 ```
-Add      ::= Mul ( ( '+' | '-' ) Mul )*
+PostSuffix
+         ::= '++'
+           | '--'
 ```
 
 referenced by:
 
-* Shift
+* Postfix
 
-**Mul:**
+**Primary:**
 
-![Mul](diagram/Mul.png)
+![Primary](diagram/Primary.png)
 
 ```
-Mul      ::= Prefix ( ( '*' | '/' | '%' ) Prefix )*
+Primary  ::= Literal
+           | '(' Expr ')'
 ```
 
 referenced by:
 
-* Add
+* Postfix
+
+**Postfix:**
+
+![Postfix](diagram/Postfix.png)
+
+```
+Postfix  ::= LValue PostSuffix?
+           | PlaceWithCall
+           | ParenWithCall
+           | Primary
+```
+
+referenced by:
+
+* Prefix
+
+**IncDecPrefix:**
+
+![IncDecPrefix](diagram/IncDecPrefix.png)
+
+```
+IncDecPrefix
+         ::= ( '++' | '--' ) LValue
+```
+
+referenced by:
+
+* Prefix
 
 **Prefix:**
 
@@ -430,86 +721,153 @@ referenced by:
 
 * Mul
 
-**IncDecPrefix:**
+**Mul:**
 
-![IncDecPrefix](diagram/IncDecPrefix.png)
-
-```
-IncDecPrefix
-         ::= ( '++' | '--' ) Place
-```
-
-referenced by:
-
-* Prefix
-
-**Postfix:**
-
-![Postfix](diagram/Postfix.png)
+![Mul](diagram/Mul.png)
 
 ```
-Postfix  ::= Place PostOp*
-           | Primary
+Mul      ::= Prefix ( ( '*' | '/' | '%' ) Prefix )*
 ```
 
 referenced by:
 
-* Prefix
+* Add
 
-**PostOp:**
+**Add:**
 
-![PostOp](diagram/PostOp.png)
-
-```
-PostOp   ::= '++'
-           | '--'
-```
-
-referenced by:
-
-* Postfix
-
-**Primary:**
-
-![Primary](diagram/Primary.png)
+![Add](diagram/Add.png)
 
 ```
-Primary  ::= Ident
-           | Literal
-           | '(' Expr ')'
+Add      ::= Mul ( ( '+' | '-' ) Mul )*
 ```
 
 referenced by:
 
-* Postfix
+* Shift
 
-**FuncDef:**
+**Shift:**
 
-![FuncDef](diagram/FuncDef.png)
-
-```
-FuncDef  ::= 'func' Ident '(' ParamList? ')' RetType Block
-```
-
-referenced by:
-
-* TopLevelDecl
-
-**ExternDecl:**
-
-![ExternDecl](diagram/ExternDecl.png)
+![Shift](diagram/Shift.png)
 
 ```
-ExternDecl
-         ::= 'extern' StringLiteral? 'func' Ident '(' ParamList? ')' R
+Shift    ::= Add ( ( '<<' | '>>' ) Add )*
 ```
 
 referenced by:
 
-* TopLevelDecl
+* Rel
+
+**Rel:**
+
+![Rel](diagram/Rel.png)
+
+```
+Rel      ::= Shift ( ( '<' | '<=' | '>' | '>=' ) Shift )*
+```
+
+referenced by:
+
+* Equality
+
+**Equality:**
+
+![Equality](diagram/Equality.png)
+
+```
+Equality ::= Rel ( ( '==' | '!=' ) Rel )*
+```
+
+referenced by:
+
+* LogicAnd
+
+**LogicAnd:**
+
+![LogicAnd](diagram/LogicAnd.png)
+
+```
+LogicAnd ::= Equality ( '&&' Equality )*
+```
+
+referenced by:
+
+* LogicOr
+
+**LogicOr:**
+
+![LogicOr](diagram/LogicOr.png)
+
+```
+LogicOr  ::= LogicAnd ( '||' LogicAnd )*
+```
+
+referenced by:
+
+* ConstExpr
+
+**ConstExpr:**
+
+![ConstExpr](diagram/ConstExpr.png)
+
+```
+ConstExpr
+         ::= LogicOr ( '?' Expr ':' LogicOr )*
+```
+
+referenced by:
+
+* Expr
+* TypeArg
+
+**AssignOp:**
+
+![AssignOp](diagram/AssignOp.png)
+
+```
+AssignOp ::= '='
+           | '+='
+           | '-='
+           | '*='
+           | '/='
+           | '%='
+           | '<<='
+           | '>>='
+           | '&='
+           | '^='
+           | '|='
+```
+
+referenced by:
+
+* Expr
+
+**Expr:**
+
+![Expr](diagram/Expr.png)
+
+```
+Expr     ::= ( LValue AssignOp )* ConstExpr
+```
+
+referenced by:
+
+* ArgList
+* ConstExpr
+* DeclInit
+* DeclStmt
+* ExprStmt
+* ForInit
+* ForStep
+* ForStmt
+* IfStmt
+* ParenWithCall
+* Primary
+* ReturnStmt
+* TailNoCall
+* TailWithCall
+* WhileStmt
 
 ##  
-
 ![rr-2.5](diagram/rr-2.5.png) <sup>generated by [RR - Railroad Diagram Generator][RR]</sup>
 
 [RR]: https://www.bottlecaps.de/rr/ui
