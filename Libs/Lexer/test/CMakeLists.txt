@@ -6,4 +6,11 @@ target_link_libraries(WaffleLexerTestSuite PRIVATE
 )
 
 include(GoogleTest)
-gtest_discover_tests(WaffleLexerTestSuite)
+
+if (CMAKE_CROSSCOMPILING)
+    # Can't run test exe at configure time, just register them by regex
+    gtest_add_tests(TARGET WaffleLexerTestSuite TEST_SUFFIX .no_discovery)
+else ()
+    # Normal host build → discover tests automatically
+    gtest_discover_tests(WaffleLexerTestSuite)
+endif ()
